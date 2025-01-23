@@ -9,33 +9,26 @@
 <mat-stepper linear #stepper>
   <mat-step [stepControl]="dataForm" [editable]="true">
     <div class="form-container">
-      <form [formGroup]="dataForm">
+      <form class="nav-form" [formGroup]="dataForm">
         <ng-template matStepLabel>Datos generales</ng-template>
         <div class="data-form-fields">
 
-          <mat-label>Hora de salida (aproximada)</mat-label>
-          <div class="departure-time-field">
-            <mat-form-field appearance="outline" style="width: 80px;">
-              <input type="number" min="0" max="23" matInput formControlName="departureTimeHour" required>
-            </mat-form-field>
-            <p>:</p>
-            <mat-form-field appearance="outline" style="width: 80px;">
-              <input type="number" min="0" max="59" matInput formControlName="departureTimeMinute" required>
-            </mat-form-field>
-          </div>
-
-          <mat-label>Velocidad media (km/h)</mat-label>
-          <mat-form-field appearance="outline" style="width: 128px;">
-            <input type="number" min="1" matInput formControlName="meanVelocity" required>
+          <mat-form-field subscriptSizing="dynamic" appearance="outline" style="width: 256px;">
+            <mat-label>Hora de salida</mat-label>
+            <input matInput [matTimepicker]="picker" formControlName="departureTime" required>
+            <mat-timepicker-toggle matIconSuffix [for]="picker"></mat-timepicker-toggle>
+            <mat-timepicker interval="15min" #picker/>
           </mat-form-field>
 
-          <mat-label>Consumo medio (litros/h)</mat-label>
-          <mat-form-field appearance="outline" style="width: 128px;">
+          <mat-form-field subscriptSizing="dynamic" appearance="outline" style="width: 256px;">
+            <mat-label>Velocidad media (km/h)</mat-label>
+            <input type="number" min="80" matInput formControlName="meanVelocity" required>
+          </mat-form-field>
+
+          <mat-form-field subscriptSizing="dynamic" appearance="outline" style="width: 256px;">
+            <mat-label>Consumo medio (litros/h)</mat-label>
             <input type="number" min="0" matInput formControlName="meanConsumption" required>
           </mat-form-field>
-        </div>
-        <div style="width: 100%; display: flex; justify-content: end;">
-          <button mat-button matStepperNext [disabled]="!dataForm.valid">Continuar</button>
         </div>
       </form>
     </div>
@@ -111,18 +104,11 @@
             <p style="display: flex; flex-direction: row; gap: 5px; align-items: center;"><mat-icon>info</mat-icon>&nbsp;Aún no has añadido ningún punto</p>
           </div>
         </div>
-        <div *ngIf="dataSourceTable1.length > 1" class="generate-route-container">
-          <button matStepperNext mat-stroked-button (click)="generateRoute();">Generar ruta</button>
-        </div>
       </div>
-    </div>
-
-    <div style="width: 100%; display: flex;">
-      <button mat-button matStepperPrevious>Back</button>
     </div>
   </mat-step>
   <mat-step [editable]="true">
-    <ng-template matStepLabel>Ruta</ng-template>
+    <ng-template matStepLabel>Ruta final</ng-template>
     
     <div class="step3-container">
       <div class="step3-map-container">
@@ -135,57 +121,70 @@
           <ng-container matColumnDef="section">
             <th mat-header-cell *matHeaderCellDef> Tramo </th>
             <td mat-cell *matCellDef="let element"> {{element.section}} </td>
+            <td mat-footer-cell *matFooterCellDef>Total</td>
           </ng-container>
         
           <ng-container matColumnDef="origin">
             <th mat-header-cell *matHeaderCellDef> Origen </th>
             <td mat-cell *matCellDef="let element"> {{element.origin}} </td>
+            <td mat-footer-cell *matFooterCellDef></td>
           </ng-container>
         
           <ng-container matColumnDef="destination">
             <th mat-header-cell *matHeaderCellDef> Destino </th>
             <td mat-cell *matCellDef="let element"> {{element.destination}} </td>
+            <td mat-footer-cell *matFooterCellDef></td>
           </ng-container>
         
           <ng-container matColumnDef="distance">
             <th mat-header-cell *matHeaderCellDef> Distancia (km) </th>
             <td mat-cell *matCellDef="let element"> {{element.distance.toFixed(2)}} </td>
+            <td mat-footer-cell *matFooterCellDef> {{totalDistance.toFixed(2)}} </td>
           </ng-container>
       
           <ng-container matColumnDef="time1">
             <th mat-header-cell *matHeaderCellDef> Hora de salida </th>
             <td mat-cell *matCellDef="let element"> {{element.time1}} </td>
+            <td mat-footer-cell *matFooterCellDef></td>
           </ng-container>
       
           <ng-container matColumnDef="course">
             <th mat-header-cell *matHeaderCellDef> Rumbo </th>
             <td mat-cell *matCellDef="let element"> {{element.course}} </td>
+            <td mat-footer-cell *matFooterCellDef></td>
           </ng-container>
       
           <ng-container matColumnDef="time2">
             <th mat-header-cell *matHeaderCellDef> Tiempo estimado </th>
             <td mat-cell *matCellDef="let element"> {{element.time2}} </td>
+            <td mat-footer-cell *matFooterCellDef> {{getFormattedTimeFromDate(totalTime)}} </td>
           </ng-container>
       
           <ng-container matColumnDef="time3">
             <th mat-header-cell *matHeaderCellDef> Hora de llegada </th>
             <td mat-cell *matCellDef="let element"> {{element.time3}} </td>
+            <td mat-footer-cell *matFooterCellDef></td>
           </ng-container>
       
           <ng-container matColumnDef="consumption">
             <th mat-header-cell *matHeaderCellDef> Consumo (litros) </th>
             <td mat-cell *matCellDef="let element"> {{element.consumption.toFixed(2)}} </td>
+            <td mat-footer-cell *matFooterCellDef> {{totalConsumption.toFixed(2)}} </td>
           </ng-container>
         
           <tr mat-header-row *matHeaderRowDef="displayedColumnsTable2"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumnsTable2;"></tr>
+          <tr mat-footer-row *matFooterRowDef="displayedColumnsTable2"></tr>
         </table>
       </div>
     </div>
-
-    <div>
-      <button mat-button matStepperPrevious>Back</button>
-      <button mat-button (click)="resetAllSteps(); stepper.reset();">Reset</button>
-    </div>
   </mat-step>
 </mat-stepper>
+
+<div class="nav-container">
+  <div *ngIf="currentStep == 1"></div>
+  <button *ngIf="currentStep > 1" mat-stroked-button (click)="stepper.previous(); decreaseCurrentStep();">Volver</button>
+  <button *ngIf="currentStep == 1" mat-flat-button (click)="stepper.next(); resetStep2(); increaseCurrentStep();" [disabled]="!dataForm.valid">Continuar</button>
+  <button *ngIf="currentStep == 2" mat-flat-button (click)="stepper.next(); resetStep3(); increaseCurrentStep(); generateRoute();" [disabled]="dataSourceTable1.length < 2">Generar ruta</button>
+  <button *ngIf="currentStep == 3" mat-flat-button (click)="stepper.reset(); resetAllSteps();">Reiniciar</button>
+</div>

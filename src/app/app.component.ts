@@ -9,6 +9,8 @@ import { MatTable, MatTableModule } from '@angular/material/table';
 import { CommonModule } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatStepperModule } from '@angular/material/stepper';
+import { MatTimepickerModule } from '@angular/material/timepicker';
+import { MAT_DATE_LOCALE, provideNativeDateAdapter } from '@angular/material/core';
 
 export class Point {
   point: number;
@@ -62,7 +64,9 @@ export class Section {
             MatTableModule,
             CommonModule,
             MatToolbarModule,
-            MatStepperModule],
+            MatStepperModule,
+            MatTimepickerModule],
+  providers: [provideNativeDateAdapter(), {provide: MAT_DATE_LOCALE, useValue: 'es-ES'}],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
@@ -74,10 +78,9 @@ export class AppComponent {
   //Form groups
   //Data form group
   dataForm: FormGroup = this._fb.group({
-    departureTimeHour: ['', [Validators.required, Validators.min(0), Validators.max(23)]],
-    departureTimeMinute: ['', [Validators.required, Validators.min(0), Validators.max(59)]],
-    meanVelocity: ['', [Validators.required, Validators.min(1)]],
-    meanConsumption: ['', [Validators.required, Validators.min(0)]]
+    departureTime: ['', [Validators.required]],
+    meanVelocity: [160, [Validators.required, Validators.min(80)]],
+    meanConsumption: [15, [Validators.required, Validators.min(0)]]
   });
 
   //Data form group
@@ -108,6 +111,7 @@ export class AppComponent {
 
   //Markers
   markerListStep2Map: Marker[] = [];
+  markerListStep3Map: Marker[] = [];
   auxMarkerStep2Map: Marker | null = null;
 
   //Polyline
@@ -132,14 +136,22 @@ export class AppComponent {
     shadowSize: [41, 41]
   });
 
+  //Stepper
+  currentStep: number = 1;
+
+  //Total
+  totalDistance: number = 0;
+  totalTime: number[] = [0, 0];
+  totalConsumption: number = 0;
+
   constructor()
   {
   }
 
   ngAfterViewInit(): void {
-    this.step2Map = new Map('step2map').setView([36.8513868, -5.5944967], 5);
+    this.step2Map = new Map('step2map').setView([36.8513868, -5.5944967], 6);
 
-    this.step3Map = new Map('step3map').setView([36.8513868, -5.5944967], 5);
+    this.step3Map = new Map('step3map').setView([36.8513868, -5.5944967], 6);
 
     tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -210,17 +222,24 @@ export class AppComponent {
     this.table1.renderRows();
   }
 
+  getFormattedTimeFromDate(date: number[])
+  {
+    let timeString: string = date[0] + ':' + (date[1] < 10 ? '0' : '') + date[1];
+    return timeString;
+  }
+
   generateRoute()
   {
     let pointList: Point[] = [...this.dataSourceTable1];
 
     pointList.push(pointList[0]);
 
-    let currentTime: number[] = [this.dataForm.get('departureTimeHour')?.value, this.dataForm.get('departureTimeMinute')?.value];
+    let departureTime: Date = this.dataForm.get('departureTime')?.value;
+    let currentTime: number[] = [departureTime.getHours(), departureTime.getMinutes()];
 
-    let totalDistance: number = 0;
-    let totalTime: number[] = [0, 0];
-    let totalConsumption: number = 0;
+    this.totalDistance = 0;
+    this.totalTime = [0, 0];
+    this.totalConsumption = 0;
 
     let latlngs = [];
 
@@ -234,26 +253,30 @@ export class AppComponent {
       //Calculates the distance between previous points (km)
       let distance = (Number(this.step2Map?.distance(latLng1, latLng2)) / 1000.0);
 
-      let time1 = currentTime[0] + ':' + (currentTime[1] < 10 ? '0' : '') + currentTime[1];
+      //Gets the time1 string from the current time
+      let time1 = this.getFormattedTimeFromDate(currentTime);
 
+      //Calculates the bearing between two latLng points
       let course = this.calculateBearing(latLng1.lat, latLng1.lng, latLng2.lat, latLng2.lng);
 
+      //Gets the hours and minutes for the current section, and stringify them
       let {hours, minutes} = this.dec2Time(distance / this.dataForm.get('meanVelocity')?.value);
+      let time2 = this.getFormattedTimeFromDate([hours, minutes]); 
 
-      let time2 = hours + ':' + (minutes < 10 ? '0' : '') + minutes; 
-
+      //Calculates the arrival time
       let destinationMinutes = (currentTime[1] + minutes) % 60;
       let destinationHours = (currentTime[0] + (hours + Math.floor( (currentTime[1] + minutes) / 60))) % 24;
-      let time3 = destinationHours + ':' + (destinationMinutes < 10 ? '0' : '') + destinationMinutes;
+      let time3 = this.getFormattedTimeFromDate([destinationHours, destinationMinutes]);
 
+      //Calculates the consumption for the current section
       let consumption: number = (distance / this.dataForm.get('meanVelocity')?.value) * this.dataForm.get('meanConsumption')?.value;
 
+      //Creates a new section an adds it to the section data source
       let newSection: Section = new Section((i + 1).toString(), pointList[i].name, pointList[i+1].name, distance, String(time1), course.toFixed(1).toString(), time2, String(time3), consumption);
       this.dataSourceTable2.push(newSection);
 
-      currentTime = [destinationHours, destinationMinutes];
-
       //Draws polylines between points
+      //TODO: REVISAR ESTO PARA EL RESET
       latlngs.push([latLng1, latLng2])
       let polyline: Polyline = new Polyline([latLng1, latLng2], {color: 'red', dashArray: '10, 10'});
       polyline.bindTooltip('Distancia: ' + distance.toFixed(2).toString() + ' km', {permanent: true});
@@ -261,18 +284,26 @@ export class AppComponent {
       this.routePolylines.push(polyline);
 
       //Calculates total variables
-      totalDistance += distance;
-      totalTime = [totalTime[0] + hours, totalTime[1] + minutes];
-      totalConsumption += consumption;
+      this.totalDistance += distance;
+      this.totalTime = [this.totalTime[0] + hours, this.totalTime[1] + minutes];
+      this.totalConsumption += consumption;
+
+      //Updates the current time
+      currentTime = [destinationHours, destinationMinutes];
     }
 
-    let routePolyline = new Polyline(latlngs, {color: 'red', dashArray: '10, 10'});
-    this.step3Map?.fitBounds(routePolyline.getBounds(), {animate: true, duration: 5});
+    //For each marker in the step 2 map, one for step 3 map is created and saved
+    this.markerListStep2Map.forEach((marker) => {
+      let newMarker: Marker = new Marker(marker.getLatLng(), {icon: this.blueIcon}).bindTooltip(marker.getTooltip()?.getContent()+'');
+      this.step3Map?.addLayer(newMarker);
+      this.markerListStep3Map.push(newMarker);
+    });
 
-    totalTime = [totalTime[0] + Math.floor(totalTime[1] / 60), (totalTime[1] % 60)]
+    //Sets the step 3 map bounds to the bounds of a polyline built from all the sections
+    let routePolyline = new Polyline(latlngs);
+    this.step3Map?.fitBounds(routePolyline.getBounds());
 
-    let newSection: Section = new Section('Total', '', '', totalDistance, '', '', totalTime[0] + ':' + (totalTime[1] < 10 ? '0' : '') + totalTime[1], '', totalConsumption);
-    this.dataSourceTable2.push(newSection);
+    this.totalTime = [this.totalTime[0] + Math.floor(this.totalTime[1] / 60), (this.totalTime[1] % 60)]
 
     this.table2.renderRows();
   }
@@ -305,19 +336,8 @@ export class AppComponent {
     return { hours, minutes };
   }
 
-  resetAllSteps()
+  resetStep2()
   {
-    //Step 3 table is reset
-    this.dataSourceTable2 = [];
-    this.table2.renderRows();
-
-    //Step 3 map Polylines are deleted
-    this.routePolylines.forEach((polyline) => {
-      this.step3Map?.removeLayer(polyline);
-    });
-
-    this.routePolylines = [];
-
     //Step 2 table is reset
     this.dataSourceTable1 = [];
     this.table1.renderRows();
@@ -326,8 +346,56 @@ export class AppComponent {
     this.pointForm.reset();
     this.pointForm.updateValueAndValidity();
 
+    //Step 2 map markers are deleted
+    this.markerListStep2Map.forEach((marker) => {
+      this.step2Map?.removeLayer(marker);
+    });
+
+    if (this.auxMarkerStep2Map != null)
+      this.step2Map?.removeLayer(this.auxMarkerStep2Map);
+
+    //Map view is set to default
+    this.step2Map?.setView([36.8513868, -5.5944967], 6);
+  }
+
+  resetStep3()
+  {
+    //Step 3 table is reset
+    this.dataSourceTable2 = [];
+    this.table2.renderRows();
+
+    //Step 3 map markers are deleted
+    this.markerListStep3Map.forEach((marker) => {
+      this.step3Map?.removeLayer(marker);
+    });
+
+    //Step 3 map Polylines are deleted
+    this.routePolylines.forEach((polyline) => {
+      this.step3Map?.removeLayer(polyline);
+    });
+
+    this.routePolylines = [];
+  }
+
+  resetAllSteps()
+  {
+    this.resetStep2();
+    this.resetStep3();
+
     //Step 1 form is reset
     this.dataForm.reset();
     this.dataForm.updateValueAndValidity();
+
+    this.currentStep = 1;
+  }
+
+  increaseCurrentStep()
+  {
+    this.currentStep++;
+  }
+
+  decreaseCurrentStep()
+  {
+    this.currentStep--;
   }
 }
