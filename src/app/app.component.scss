@@ -215,6 +215,14 @@
     bottom: 0;
 
     z-index: 400;
+
+    .nav-container-right-buttons
+    {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+    }
 }
 
 ::ng-deep .mat-horizontal-stepper-header{

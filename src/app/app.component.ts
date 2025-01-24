@@ -12,6 +12,10 @@ import { MatStepperModule } from '@angular/material/stepper';
 import { MatTimepickerModule } from '@angular/material/timepicker';
 import { MAT_DATE_LOCALE, provideNativeDateAdapter } from '@angular/material/core';
 
+
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable'
+
 export class Point {
   point: number;
   name: string;
@@ -397,5 +401,11 @@ export class AppComponent {
   decreaseCurrentStep()
   {
     this.currentStep--;
+  }
+
+  downloadPdf() {
+    const doc = new jsPDF();
+    autoTable(doc, { html: '#table2' });
+    doc.save('ruta.pdf');
   }
 }

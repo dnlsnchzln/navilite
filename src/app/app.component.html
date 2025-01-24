@@ -116,7 +116,7 @@
       </div>
 
       <div class="container-tabla-ruta">
-        <table #table2 mat-table [dataSource]="dataSourceTable2">
+        <table id="table2" #table2 mat-table [dataSource]="dataSourceTable2">
       
           <ng-container matColumnDef="section">
             <th mat-header-cell *matHeaderCellDef> Tramo </th>
@@ -186,5 +186,9 @@
   <button *ngIf="currentStep > 1" mat-stroked-button (click)="stepper.previous(); decreaseCurrentStep();">Volver</button>
   <button *ngIf="currentStep == 1" mat-flat-button (click)="stepper.next(); resetStep2(); increaseCurrentStep();" [disabled]="!dataForm.valid">Continuar</button>
   <button *ngIf="currentStep == 2" mat-flat-button (click)="stepper.next(); resetStep3(); increaseCurrentStep(); generateRoute();" [disabled]="dataSourceTable1.length < 2">Generar ruta</button>
-  <button *ngIf="currentStep == 3" mat-flat-button (click)="stepper.reset(); resetAllSteps();">Reiniciar</button>
+
+  <div *ngIf="currentStep == 3" class="nav-container-right-buttons">
+    <button mat-flat-button (click)="downloadPdf();" style="background-color: indianred;">Descargar PDF</button>
+    <button mat-flat-button (click)="stepper.reset(); resetAllSteps(); ">Reiniciar</button>
+  </div>
 </div>
