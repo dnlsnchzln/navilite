@@ -38,12 +38,12 @@ export class Section {
   destination: string;
   distance: number;
   time1: string; 
-  course: string;
+  course: number;
   time2: string;
   time3: string;
   consumption: number;
 
-  constructor(section: string, origin: string, destination: string, distance: number, time1: string, course: string, time2: string, time3: string, consumption: number)
+  constructor(section: string, origin: string, destination: string, distance: number, time1: string, course: number, time2: string, time3: string, consumption: number)
   {
     this.section = section; 
     this.origin = origin;
@@ -310,7 +310,7 @@ export class AppComponent {
       let consumption: number = (distance / this.dataForm.get('meanVelocity')?.value) * this.dataForm.get('meanConsumption')?.value;
 
       //Creates a new section an adds it to the section data source
-      let newSection: Section = new Section((i + 1).toString(), pointList[i].name, pointList[i+1].name, distance, String(time1), course.toFixed(1).toString(), time2, String(time3), consumption);
+      let newSection: Section = new Section((i + 1).toString(), pointList[i].name, pointList[i+1].name, this.round(distance), String(time1), this.round(course), time2, String(time3), consumption);
       this.dataSourceTable2.push(newSection);
 
       //Draws polylines between points
@@ -328,6 +328,8 @@ export class AppComponent {
       //Updates the current time
       currentTime = [destinationHours, destinationMinutes];
     }
+
+    this.totalDistance = this.round(this.totalDistance);
 
     //For each marker in the step 2 map, one for step 3 map is created and saved
     this.markerListStep2Map.forEach((marker) => {
@@ -452,5 +454,13 @@ export class AppComponent {
   {
     if (this.latLngBounds != null)
       this.step3Map?.fitBounds(this.latLngBounds);
+  }
+
+  round(num: number)
+  {
+    if ((num - Math.floor(num)) < 0.5)
+      return Math.floor(num);
+    else
+      return Math.ceil(num);
   }
 }
