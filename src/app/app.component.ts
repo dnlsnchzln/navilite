@@ -197,23 +197,23 @@ export class AppComponent {
     //TODO: QUITAR ANTES DEL DESPLIEGUE
 
     //Test step 2
-    this.dataForm.get('departureTime')?.setValue(new Date(2025, 1, 31, 10, 0, 0, 0));
-    this.currentStep = 2;
-    this.stepper.next();
+    // this.dataForm.get('departureTime')?.setValue(new Date(2025, 1, 31, 10, 0, 0, 0));
+    // this.currentStep = 2;
+    // this.stepper.next();
 
-    this.dataSourceTable1.push(new Point(1, 'LETF', 36.8719, -5.6489))
-    this.dataSourceTable1.push(new Point(1, 'Lebrija', 36.8960, -6.0396))
-    this.dataSourceTable1.push(new Point(1, 'Utrera', 37.1825, -5.7818))
+    // this.dataSourceTable1.push(new Point(1, 'LETF', 36.8719, -5.6489))
+    // this.dataSourceTable1.push(new Point(1, 'Lebrija', 36.8960, -6.0396))
+    // this.dataSourceTable1.push(new Point(1, 'Utrera', 37.1825, -5.7818))
 
-    this.table1.renderRows();
+    // this.table1.renderRows();
 
-    this.markerListStep2Map.push(new Marker([36.8719, -5.6489], {icon: this.blueIcon}).bindTooltip('LETF'));
-    this.markerListStep2Map.push(new Marker([36.8960, -6.0396], {icon: this.blueIcon}).bindTooltip('Lebrija'));
-    this.markerListStep2Map.push(new Marker([37.1825, -5.7818], {icon: this.blueIcon}).bindTooltip('Utrera'));
+    // this.markerListStep2Map.push(new Marker([36.8719, -5.6489], {icon: this.blueIcon}).bindTooltip('LETF'));
+    // this.markerListStep2Map.push(new Marker([36.8960, -6.0396], {icon: this.blueIcon}).bindTooltip('Lebrija'));
+    // this.markerListStep2Map.push(new Marker([37.1825, -5.7818], {icon: this.blueIcon}).bindTooltip('Utrera'));
 
-    this.markerListStep2Map.forEach((marker) => {
-      this.step2Map?.addLayer(marker);
-    });
+    // this.markerListStep2Map.forEach((marker) => {
+    //   this.step2Map?.addLayer(marker);
+    // });
   }
 
   addPoint()
