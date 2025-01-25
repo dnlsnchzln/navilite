@@ -1,194 +1,228 @@
 <mat-toolbar class="toolbar">
-  <span><strong>NaviLite</strong></span>
+  <span><strong>NaviLite {{app_version}}</strong></span>
   <span style="flex: 1 1 auto;"></span>
-  <button mat-icon-button>
+  <!-- <button mat-icon-button>
     <mat-icon style="color: #004589;">help</mat-icon>
-  </button>
+  </button> -->
 </mat-toolbar>
 
-<mat-stepper linear #stepper>
+<mat-stepper id="stepper" linear #stepper>
+
+  <!-- STEP 1: DATA FORM -->
   <mat-step [stepControl]="dataForm" [editable]="true">
-    <div class="form-container">
-      <form class="nav-form" [formGroup]="dataForm">
-        <ng-template matStepLabel>Datos generales</ng-template>
-        <div class="data-form-fields">
+    <ng-template matStepLabel>Datos generales</ng-template>
+    <div class="step1-form-container">
+      <form [formGroup]="dataForm">
+        <mat-form-field class="field" subscriptSizing="dynamic" appearance="outline">
+          <mat-label>Hora de salida</mat-label>
+          <input matInput [matTimepicker]="picker" formControlName="departureTime" required>
+          <mat-timepicker-toggle matIconSuffix [for]="picker"></mat-timepicker-toggle>
+          <mat-timepicker interval="15min" #picker />
+        </mat-form-field>
 
-          <mat-form-field subscriptSizing="dynamic" appearance="outline" style="width: 256px;">
-            <mat-label>Hora de salida</mat-label>
-            <input matInput [matTimepicker]="picker" formControlName="departureTime" required>
-            <mat-timepicker-toggle matIconSuffix [for]="picker"></mat-timepicker-toggle>
-            <mat-timepicker interval="15min" #picker/>
-          </mat-form-field>
+        <mat-form-field class="field" subscriptSizing="dynamic" appearance="outline">
+          <mat-label>Velocidad media (km/h)</mat-label>
+          <input type="number" min="80" matInput formControlName="meanVelocity" required>
+        </mat-form-field>
 
-          <mat-form-field subscriptSizing="dynamic" appearance="outline" style="width: 256px;">
-            <mat-label>Velocidad media (km/h)</mat-label>
-            <input type="number" min="80" matInput formControlName="meanVelocity" required>
-          </mat-form-field>
-
-          <mat-form-field subscriptSizing="dynamic" appearance="outline" style="width: 256px;">
-            <mat-label>Consumo medio (litros/h)</mat-label>
-            <input type="number" min="0" matInput formControlName="meanConsumption" required>
-          </mat-form-field>
-        </div>
+        <mat-form-field class="field" subscriptSizing="dynamic" appearance="outline">
+          <mat-label>Consumo medio (litros/h)</mat-label>
+          <input type="number" min="0" matInput formControlName="meanConsumption" required>
+        </mat-form-field>
       </form>
     </div>
   </mat-step>
+
+  <!-- STEP 2: ROUTE POINTS -->
   <mat-step [editable]="true">
     <ng-template matStepLabel>Puntos</ng-template>
 
     <div class="step2-container">
-      <div class="step2-left-container">
-        <div class="container-form">
-          <form class="nav-form" [formGroup]="pointForm">
-            <mat-form-field subscriptSizing="dynamic" appearance="outline">
-              <mat-label>Nombre</mat-label>
-              <input matInput formControlName="name" required>
-            </mat-form-field>
-            <mat-form-field subscriptSizing="dynamic" appearance="outline">
+      <div class="step2-map-container">
+        <div class="form-container">
+          <form [formGroup]="pointForm">
+            <mat-form-field class="field" subscriptSizing="dynamic" appearance="outline">
               <mat-label>Latitud</mat-label>
               <input matInput formControlName="latitude" required>
             </mat-form-field>
-            <mat-form-field subscriptSizing="dynamic" appearance="outline">
+            <mat-form-field class="field" subscriptSizing="dynamic" appearance="outline">
               <mat-label>Longitud</mat-label>
               <input matInput formControlName="longitude" required>
             </mat-form-field>
-            <button mat-stroked-button (click)="addPoint();" [disabled]="!pointForm.valid">
+            <mat-form-field class="field" subscriptSizing="dynamic" appearance="outline">
+              <mat-label>Nombre</mat-label>
+              <input matInput formControlName="name" required>
+            </mat-form-field>
+            <button class="field" mat-fab extended disabled (click)="addPoint();" [disabled]="!pointForm.valid">
               <mat-icon>add</mat-icon>
               Añadir punto
             </button>
           </form>
         </div>
-        <div class="step2-map-container">
-          <div id="step2map"></div>
+        <div class="map-container">
+          <div class="action-buttons-container">
+            <button class="button" mat-mini-fab (click)="step2MapEnabled = !step2MapEnabled"
+              [ngStyle]="{'background-color': step2MapEnabled ? 'indianred' : '#d8ebff'}">
+              <mat-icon>{{step2MapEnabled ? 'close' : 'place'}}</mat-icon>
+            </button>
+            <button class="button" mat-mini-fab (click)="recencerViewStep2Map();" [disabled]="!step2MapEnabled">
+              <mat-icon>gps_fixed</mat-icon>
+            </button>
+          </div>
+          <div *ngIf="!step2MapEnabled" class="step2-map-disabled-layer">
+            <p>Interacción desactivada. Pulsa el botón de posición para activarla.</p>
+          </div>
+          <div id="step2map" [ngClass]="{'map-disabled': !step2MapEnabled}"></div>
         </div>
       </div>
+      <div class="step2-table-container">
+        <table #table1 mat-table [dataSource]="dataSourceTable1">
 
-      <div class="step2-right-container">
-        <div class="container-tabla-puntos">
-          <table #table1 mat-table [dataSource]="dataSourceTable1">
-  
-            <ng-container matColumnDef="point">
-              <th mat-header-cell *matHeaderCellDef> Punto </th>
-              <td mat-cell *matCellDef="let element"> {{element.point}} </td>
-            </ng-container>
-  
-            <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef> Nombre </th>
-              <td mat-cell *matCellDef="let element"> {{element.name}} </td>
-            </ng-container>
-  
-            <ng-container matColumnDef="latitude">
-              <th mat-header-cell *matHeaderCellDef> Latitud </th>
-              <td mat-cell *matCellDef="let element"> {{element.latitude.toFixed(5)}} </td>
-            </ng-container>
-  
-            <ng-container matColumnDef="longitude">
-              <th mat-header-cell *matHeaderCellDef> Longitud </th>
-              <td mat-cell *matCellDef="let element"> {{element.longitude.toFixed(5)}} </td>
-            </ng-container>
-  
-            <ng-container matColumnDef="remove">
-              <th mat-header-cell *matHeaderCellDef> </th>
-              <td mat-cell *matCellDef="let element">
-                <button mat-icon-button (click)="removePoint(element);">
-                  <mat-icon style="color: red;">remove_circle_outline</mat-icon>
-                </button>
-              </td>
-            </ng-container>
-  
-            <tr mat-header-row *matHeaderRowDef="displayedColumnsTable1; sticky: true;"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumnsTable1;"></tr>
-          </table>
+          <ng-container matColumnDef="point">
+            <th mat-header-cell *matHeaderCellDef> Punto </th>
+            <td mat-cell *matCellDef="let element"> {{element.point}} </td>
+          </ng-container>
 
-          <div *ngIf="dataSourceTable1.length == 0" class="container-tabla-inf">
-            <p style="display: flex; flex-direction: row; gap: 5px; align-items: center;"><mat-icon>info</mat-icon>&nbsp;Aún no has añadido ningún punto</p>
-          </div>
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef> Nombre </th>
+            <td mat-cell *matCellDef="let element"> {{element.name}} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="latitude">
+            <th mat-header-cell *matHeaderCellDef> Latitud </th>
+            <td mat-cell *matCellDef="let element"> {{element.latitude.toFixed(5)}} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="longitude">
+            <th mat-header-cell *matHeaderCellDef> Longitud </th>
+            <td mat-cell *matCellDef="let element"> {{element.longitude.toFixed(5)}} </td>
+          </ng-container>
+
+          <ng-container matColumnDef="remove">
+            <th mat-header-cell *matHeaderCellDef> </th>
+            <td mat-cell *matCellDef="let element">
+              <button mat-icon-button (click)="removePoint(element);">
+                <mat-icon style="color: red;">remove_circle_outline</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumnsTable1; sticky: true;"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumnsTable1;"></tr>
+        </table>
+
+        <div *ngIf="dataSourceTable1.length == 0" class="container-tabla-inf">
+          <p style="display: flex; flex-direction: row; gap: 5px; align-items: center;">
+            <mat-icon>info</mat-icon>&nbsp;Aún no has añadido ningún punto
+          </p>
         </div>
       </div>
     </div>
+    <div style="height: 64px; width: 100%;"></div>
   </mat-step>
+
+  <!-- STEP 3: ROUTE -->
   <mat-step [editable]="true">
     <ng-template matStepLabel>Ruta final</ng-template>
-    
+
     <div class="step3-container">
-      <div class="step3-map-container">
-        <div id="step3map"></div>
+      <div class="map-container">
+        <div class="action-buttons-container">
+          <button class="button" mat-mini-fab (click)="step3MapEnabled = !step3MapEnabled"
+            [ngStyle]="{'background-color': step3MapEnabled ? 'indianred' : '#d8ebff'}">
+            <mat-icon>{{step3MapEnabled ? 'close' : 'remove_red_eye'}}</mat-icon>
+          </button>
+          <button class="button" mat-mini-fab (click)="recencerViewStep3Map();" [disabled]="!step3MapEnabled">
+            <mat-icon>gps_fixed</mat-icon>
+          </button>
+        </div>
+        <div *ngIf="!step3MapEnabled" class="step2-map-disabled-layer">
+        </div>
+        <div id="step3map" [ngClass]="{'map-disabled': !step3MapEnabled}"></div>
       </div>
 
       <div class="container-tabla-ruta">
         <table id="table2" #table2 mat-table [dataSource]="dataSourceTable2">
-      
+
           <ng-container matColumnDef="section">
             <th mat-header-cell *matHeaderCellDef> Tramo </th>
             <td mat-cell *matCellDef="let element"> {{element.section}} </td>
             <td mat-footer-cell *matFooterCellDef>Total</td>
           </ng-container>
-        
+
           <ng-container matColumnDef="origin">
             <th mat-header-cell *matHeaderCellDef> Origen </th>
             <td mat-cell *matCellDef="let element"> {{element.origin}} </td>
             <td mat-footer-cell *matFooterCellDef></td>
           </ng-container>
-        
+
           <ng-container matColumnDef="destination">
             <th mat-header-cell *matHeaderCellDef> Destino </th>
             <td mat-cell *matCellDef="let element"> {{element.destination}} </td>
             <td mat-footer-cell *matFooterCellDef></td>
           </ng-container>
-        
+
           <ng-container matColumnDef="distance">
             <th mat-header-cell *matHeaderCellDef> Distancia (km) </th>
             <td mat-cell *matCellDef="let element"> {{element.distance.toFixed(2)}} </td>
             <td mat-footer-cell *matFooterCellDef> {{totalDistance.toFixed(2)}} </td>
           </ng-container>
-      
+
           <ng-container matColumnDef="time1">
             <th mat-header-cell *matHeaderCellDef> Hora de salida </th>
             <td mat-cell *matCellDef="let element"> {{element.time1}} </td>
             <td mat-footer-cell *matFooterCellDef></td>
           </ng-container>
-      
+
           <ng-container matColumnDef="course">
             <th mat-header-cell *matHeaderCellDef> Rumbo </th>
             <td mat-cell *matCellDef="let element"> {{element.course}} </td>
             <td mat-footer-cell *matFooterCellDef></td>
           </ng-container>
-      
+
           <ng-container matColumnDef="time2">
             <th mat-header-cell *matHeaderCellDef> Tiempo estimado </th>
             <td mat-cell *matCellDef="let element"> {{element.time2}} </td>
             <td mat-footer-cell *matFooterCellDef> {{getFormattedTimeFromDate(totalTime)}} </td>
           </ng-container>
-      
+
           <ng-container matColumnDef="time3">
             <th mat-header-cell *matHeaderCellDef> Hora de llegada </th>
             <td mat-cell *matCellDef="let element"> {{element.time3}} </td>
             <td mat-footer-cell *matFooterCellDef></td>
           </ng-container>
-      
+
           <ng-container matColumnDef="consumption">
             <th mat-header-cell *matHeaderCellDef> Consumo (litros) </th>
             <td mat-cell *matCellDef="let element"> {{element.consumption.toFixed(2)}} </td>
             <td mat-footer-cell *matFooterCellDef> {{totalConsumption.toFixed(2)}} </td>
           </ng-container>
-        
+
           <tr mat-header-row *matHeaderRowDef="displayedColumnsTable2"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumnsTable2;"></tr>
           <tr mat-footer-row *matFooterRowDef="displayedColumnsTable2"></tr>
         </table>
       </div>
     </div>
+    <div style="height: 64px; width: 100%;"></div>
   </mat-step>
 </mat-stepper>
 
 <div class="nav-container">
   <div *ngIf="currentStep == 1"></div>
-  <button *ngIf="currentStep > 1" mat-stroked-button (click)="stepper.previous(); decreaseCurrentStep();">Volver</button>
-  <button *ngIf="currentStep == 1" mat-flat-button (click)="stepper.next(); resetStep2(); increaseCurrentStep();" [disabled]="!dataForm.valid">Continuar</button>
-  <button *ngIf="currentStep == 2" mat-flat-button (click)="stepper.next(); resetStep3(); increaseCurrentStep(); generateRoute();" [disabled]="dataSourceTable1.length < 2">Generar ruta</button>
+  <button *ngIf="currentStep > 1" mat-stroked-button
+    (click)="stepper.previous(); decreaseCurrentStep();">Volver</button>
+  <button *ngIf="currentStep == 1" mat-flat-button (click)="stepper.next(); resetStep2(); increaseCurrentStep();"
+    [disabled]="!dataForm.valid">Continuar</button>
+  <button *ngIf="currentStep == 2" mat-flat-button
+    (click)="stepper.next(); resetStep3(); increaseCurrentStep(); generateRoute();"
+    [disabled]="dataSourceTable1.length < 2">Generar ruta</button>
 
   <div *ngIf="currentStep == 3" class="nav-container-right-buttons">
-    <button mat-flat-button (click)="downloadPdf();" style="background-color: indianred;">Descargar PDF</button>
+    <button mat-flat-button (click)="downloadPdf();" style="background-color: indianred;">
+      <mat-icon>insert_drive_file</mat-icon>
+      PDF
+    </button>
     <button mat-flat-button (click)="stepper.reset(); resetAllSteps(); ">Reiniciar</button>
   </div>
 </div>

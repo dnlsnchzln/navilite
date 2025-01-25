@@ -1,5 +1,5 @@
 import { Component, inject, ViewChild } from '@angular/core';
-import { Icon, LatLng, Map, Marker, Polyline, tileLayer } from 'leaflet';
+import { Icon, LatLng, LatLngBounds, Map, Marker, Polyline, tileLayer } from 'leaflet';
 import { FormBuilder, Validators, FormsModule, ReactiveFormsModule, FormGroup} from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -8,9 +8,10 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTable, MatTableModule } from '@angular/material/table';
 import { CommonModule } from '@angular/common';
 import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatStepperModule } from '@angular/material/stepper';
+import { MatStepper, MatStepperModule } from '@angular/material/stepper';
 import { MatTimepickerModule } from '@angular/material/timepicker';
 import { MAT_DATE_LOCALE, provideNativeDateAdapter } from '@angular/material/core';
+import { MatTabsModule } from '@angular/material/tabs';
 
 
 import jsPDF from 'jspdf';
@@ -69,12 +70,15 @@ export class Section {
             CommonModule,
             MatToolbarModule,
             MatStepperModule,
-            MatTimepickerModule],
+            MatTimepickerModule,
+            MatTabsModule],
   providers: [provideNativeDateAdapter(), {provide: MAT_DATE_LOCALE, useValue: 'es-ES'}],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
 export class AppComponent {
+
+  app_version: string = "v0.3"
 
   //FormBuilder dependency injection
   private _fb = inject(FormBuilder);
@@ -105,13 +109,15 @@ export class AppComponent {
   displayedColumnsTable2: string[] = ['section', 'origin', 'destination', 'distance', 'time1', 'course', 'time2', 'time3', 'consumption'];
   dataSourceTable2: Section[] = [];
 
-
   //Maps
   //Map1
   step2Map: Map | null = null;
+  step2MapEnabled: boolean = false;
 
   //Map2
   step3Map: Map | null = null;
+  step3MapEnabled: boolean = false;
+  latLngBounds: LatLngBounds | null = null;
 
   //Markers
   markerListStep2Map: Marker[] = [];
@@ -141,6 +147,7 @@ export class AppComponent {
   });
 
   //Stepper
+  @ViewChild('stepper') stepper!: MatStepper;
   currentStep: number = 1;
 
   //Total
@@ -162,6 +169,12 @@ export class AppComponent {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a> hosted by <a href="https://openstreetmap.fr/" target="_blank">OpenStreetMap France</a>'
     }).addTo(this.step2Map);
 
+    // tileLayer('https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey={API_KEY}', {
+    //   API_KEY: this.API_KEY,
+    //   maxZoom: 19,
+    //   attribution: '<a href="https://www.openaip.net/">openAIP Data</a>(<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-NC-SA</a>)'
+    // }).addTo(this.step2Map);
+
     tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a> hosted by <a href="https://openstreetmap.fr/" target="_blank">OpenStreetMap France</a>'
@@ -177,8 +190,29 @@ export class AppComponent {
       this.auxMarkerStep2Map = new Marker([e.latlng.lat, e.latlng.lng], {icon: this.greyIcon});
       this.step2Map?.addLayer(this.auxMarkerStep2Map);
       
-      this.pointForm.get('latitude')?.setValue(e.latlng.lat);
-      this.pointForm.get('longitude')?.setValue(e.latlng.lng);
+      this.pointForm.get('latitude')?.setValue(e.latlng.lat.toFixed(4));
+      this.pointForm.get('longitude')?.setValue(e.latlng.lng.toFixed(4));
+    });
+
+    //TODO: QUITAR ANTES DEL DESPLIEGUE
+
+    //Test step 2
+    this.dataForm.get('departureTime')?.setValue(new Date(2025, 1, 31, 10, 0, 0, 0));
+    this.currentStep = 2;
+    this.stepper.next();
+
+    this.dataSourceTable1.push(new Point(1, 'LETF', 36.8719, -5.6489))
+    this.dataSourceTable1.push(new Point(1, 'Lebrija', 36.8960, -6.0396))
+    this.dataSourceTable1.push(new Point(1, 'Utrera', 37.1825, -5.7818))
+
+    this.table1.renderRows();
+
+    this.markerListStep2Map.push(new Marker([36.8719, -5.6489], {icon: this.blueIcon}).bindTooltip('LETF'));
+    this.markerListStep2Map.push(new Marker([36.8960, -6.0396], {icon: this.blueIcon}).bindTooltip('Lebrija'));
+    this.markerListStep2Map.push(new Marker([37.1825, -5.7818], {icon: this.blueIcon}).bindTooltip('Utrera'));
+
+    this.markerListStep2Map.forEach((marker) => {
+      this.step2Map?.addLayer(marker);
     });
   }
 
@@ -280,7 +314,6 @@ export class AppComponent {
       this.dataSourceTable2.push(newSection);
 
       //Draws polylines between points
-      //TODO: REVISAR ESTO PARA EL RESET
       latlngs.push([latLng1, latLng2])
       let polyline: Polyline = new Polyline([latLng1, latLng2], {color: 'red', dashArray: '10, 10'});
       polyline.bindTooltip('Distancia: ' + distance.toFixed(2).toString() + ' km', {permanent: true});
@@ -305,7 +338,8 @@ export class AppComponent {
 
     //Sets the step 3 map bounds to the bounds of a polyline built from all the sections
     let routePolyline = new Polyline(latlngs);
-    this.step3Map?.fitBounds(routePolyline.getBounds());
+    this.latLngBounds = routePolyline.getBounds();
+    this.step3Map?.fitBounds(this.latLngBounds);
 
     this.totalTime = [this.totalTime[0] + Math.floor(this.totalTime[1] / 60), (this.totalTime[1] % 60)]
 
@@ -407,5 +441,16 @@ export class AppComponent {
     const doc = new jsPDF();
     autoTable(doc, { html: '#table2' });
     doc.save('ruta.pdf');
+  }
+
+  recencerViewStep2Map()
+  {
+    this.step2Map?.setView([36.8513868, -5.5944967], 6, {animate: true, duration: 1});
+  }
+
+  recencerViewStep3Map()
+  {
+    if (this.latLngBounds != null)
+      this.step3Map?.fitBounds(this.latLngBounds);
   }
 }
