@@ -155,25 +155,26 @@ export class AppComponent {
   totalTime: number[] = [0, 0];
   totalConsumption: number = 0;
 
+  private readonly API_KEY: string = '468038a48373daad42321ffa40df8ede';
+
   constructor()
   {
   }
 
   ngAfterViewInit(): void {
-    this.step2Map = new Map('step2map').setView([36.8513868, -5.5944967], 6);
+    this.step2Map = new Map('step2map').setView([36.8513868, -5.5944967], 7);
 
-    this.step3Map = new Map('step3map').setView([36.8513868, -5.5944967], 6);
+    this.step3Map = new Map('step3map').setView([36.8513868, -5.5944967], 7);
 
     tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a> hosted by <a href="https://openstreetmap.fr/" target="_blank">OpenStreetMap France</a>'
     }).addTo(this.step2Map);
 
-    // tileLayer('https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey={API_KEY}', {
-    //   API_KEY: this.API_KEY,
-    //   maxZoom: 19,
-    //   attribution: '<a href="https://www.openaip.net/">openAIP Data</a>(<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-NC-SA</a>)'
-    // }).addTo(this.step2Map);
+    tileLayer('https://{s}.api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey=${this.API_KEY}', {
+      maxZoom: 19,
+      attribution: '<a href="https://www.openaip.net/">openAIP Data</a>(<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-NC-SA</a>)'
+    }).addTo(this.step2Map);
 
     tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
       maxZoom: 19,
